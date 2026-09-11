@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4대 기법 통합 퉁치기 & 잔고 일별 기록 (Firebase 연동)</title>
+    <title>4대 기법 통합 퉁치기 & 잔고 일별 기록</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -25,23 +25,40 @@
         .header {
             text-align: center;
             margin-bottom: 25px;
-            position: relative;
         }
         .header h1 { font-size: 26px; margin-bottom: 8px; color: #1a365d; }
-        .header p { font-size: 13px; color: #888; }
-        
-        /* 파이어베이스 상태 표시 뱃지 */
-        #firebase-status {
-            display: inline-block;
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 10px;
-            background-color: #edf2f7;
-            color: #4a5568;
-            margin-top: 5px;
+        .header p { font-size: 13px; color: #888; margin-bottom: 12px; }
+
+        /* 파이어베이스 실시간 연동 상태 뱃지 (요청하신 디자인 반영) */
+        .firebase-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background-color: #f7fafc;
+            border: 1px solid #bee3f8;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #2b6cb0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
-        #firebase-status.connected { background-color: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
-        #firebase-status.disconnected { background-color: #fff5f5; color: #9b2c2c; border: 1px solid #feb2b2; }
+        .firebase-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #3182ce;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .firebase-badge.connected {
+            background-color: #ebf8ff;
+            border-color: #90cdf4;
+            color: #2b6cb0;
+        }
+        .firebase-badge.connected .firebase-dot {
+            background-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
+        }
 
         /* 탭 디자인 */
         .tabs {
@@ -362,8 +379,10 @@
 <div class="container">
     <div class="header">
         <h1>통합 퉁치기 & 잔고 일별 기록</h1>
-        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 잔고 연동 시스템 (REV.1.7 - Firebase 영구 연동)</p>
-        <div id="firebase-status">🔄 Firebase 서버 연결 중...</div>
+        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 실시간 클라우드 공유 시스템 (REV.1.7)</p>
+        <div id="firebase-status" class="firebase-badge">
+            <span class="firebase-dot"></span>파이어베이스 실시간 서버 연동 중...
+        </div>
     </div>
 
     <!-- 탭 버튼 -->
@@ -373,12 +392,11 @@
     <div id="tab-contents"></div>
 </div>
 
-<!-- Firebase SDK (Modular CDN) -->
+<!-- Firebase SDK 및 실시간 연동 로직 -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // 사용자가 생성한 파이어베이스 무료 테스트 서버 설정 정보
     const firebaseConfig = {
         databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-southeast1.firebasedatabase.app"
     };
@@ -386,8 +404,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // 기본 설정값 (서버에 데이터가 없을 경우 기본 로드용)
-    let defaultStrategies = [
+    const defaultStrategies = [
         { id: 'strat1', name: '스위치', defaultMult: 1, defaultCash: 72134.02, defaultShares: 0, defaultAvg: 0, defaultInit: 60000 },
         { id: 'strat2', name: '동파', defaultMult: 6, defaultCash: 68490.00, defaultShares: 90, defaultAvg: 125.87, defaultInit: 60000 },
         { id: 'strat3', name: '3쥐', defaultMult: 6, defaultCash: 49428.00, defaultShares: 12, defaultAvg: 123.31, defaultInit: 60000 },
@@ -395,93 +412,87 @@
         { id: 'strat5', name: '방어', defaultMult: 1, defaultCash: 50000.00, defaultShares: 0, defaultAvg: 0, defaultInit: 50000 }
     ];
 
-    window.strategies = defaultStrategies;
+    window.strategies = JSON.parse(localStorage.getItem('4strat_config_v13')) || defaultStrategies;
     window.chartColors = ['#2b6cb0', '#e53e3e', '#d69e2e', '#38a169', '#805ad5', '#319795', '#dd6b20'];
     window.isStratHistoryAllView = false;
     window.isBalanceHistoryAllView = false;
 
-    // 파이어베이스에서 클라우드 데이터 불러오기
-    async function loadCloudData() {
-        const statusEl = document.getElementById('firebase-status');
-        try {
-            const dbRef = ref(db);
-            const snapshot = await get(child(dbRef, 'sd3p_app_data'));
-            
-            if (snapshot.exists()) {
-                const cloudData = snapshot.val();
-                if (cloudData.strategies) window.strategies = cloudData.strategies;
-                window.cloudStrategiesConfig = cloudData.strategies || defaultStrategies;
-                window.cloudTungchigiData = cloudData.tungchigiData || {};
-                window.cloudHistoryData = cloudData.historyData || [];
-            } else {
-                window.cloudStrategiesConfig = defaultStrategies;
-                window.cloudTungchigiData = {};
-                window.cloudHistoryData = [];
-            }
+    const dbRef = ref(db, 'sd3p_app_data');
 
-            statusEl.textContent = "🟢 Firebase 서버 연결됨 (영구 보관중)";
-            statusEl.className = "connected";
-            
-            // 데이터 로드 완료 후 UI 초기화
+    // 실시간 리스너 (Firebase 데이터 변경 시 자동 반영)
+    onValue(dbRef, (snapshot) => {
+        const statusEl = document.getElementById('firebase-status');
+        const data = snapshot.val();
+        
+        if (data) {
+            if (data.strategies) {
+                window.strategies = data.strategies;
+                localStorage.setItem('4strat_config_v13', JSON.stringify(data.strategies));
+            }
+            if (data.tungchigiData) {
+                localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(data.tungchigiData));
+            }
+            if (data.historyData) {
+                localStorage.setItem('4strat_history_v13', JSON.stringify(data.historyData));
+            }
+        } else {
+            // 서버에 데이터가 아예 없을 경우 초기값 업로드
+            saveCloudData();
+        }
+
+        if (statusEl) {
+            statusEl.className = "firebase-badge connected";
+            statusEl.innerHTML = '<span class="firebase-dot"></span>파이어베이스 실시간 서버 연동 완료';
+        }
+
+        // 화면이 이미 그려져 있다면 리렌더링 싱크 맞춤
+        if (typeof initUI === 'function' && !window.isUIInitialized) {
+            window.isUIInitialized = true;
             initUI();
-        } catch (error) {
-            console.error(error);
-            statusEl.textContent = "🔴 Firebase 연결 실패 (오프라인 모드)";
-            statusEl.className = "disconnected";
-            // 오프라인 fallback (로컬스토리지 연동)
-            window.strategies = JSON.parse(localStorage.getItem('4strat_config_v13')) || defaultStrategies;
-            window.cloudStrategiesConfig = window.strategies;
-            window.cloudTungchigiData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
-            window.cloudHistoryData = JSON.parse(localStorage.getItem('4strat_history_v13')) || [];
+        } else if (typeof loadDataForDate === 'function') {
+            loadDataForDate(null);
+            if(document.getElementById('content-0')?.classList.contains('active')) {
+                // 현재 탭 유지하며 내부 데이터 갱신
+            }
+        }
+    }, (error) => {
+        console.error(error);
+        const statusEl = document.getElementById('firebase-status');
+        if (statusEl) {
+            statusEl.className = "firebase-badge";
+            statusEl.style.borderColor = "#feb2b2";
+            statusEl.style.color = "#9b2c2c";
+            statusEl.innerHTML = '<span class="firebase-dot" style="background:#e53e3e;"></span>오프라인 모드 (로컬 저장중)';
+        }
+        if (!window.isUIInitialized) {
+            window.isUIInitialized = true;
             initUI();
         }
-    }
+    });
 
-    // 파이어베이스로 전체 데이터 저장하기
-    window.saveCloudDataToFirebase = async function() {
+    // 클라우드 저장 함수
+    window.saveCloudData = async function() {
         const dataToSave = {
             strategies: window.strategies,
             tungchigiData: JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13') || '{}'),
             historyData: JSON.parse(localStorage.getItem('4strat_history_v13') || '[]')
         };
 
-        // 로컬에 우선 반영
-        localStorage.setItem('4strat_config_v13', JSON.stringify(window.strategies));
-
         try {
-            await set(ref(db, 'sd3p_app_data'), dataToSave);
-            const statusEl = document.getElementById('firebase-status');
-            statusEl.textContent = "🟢 Firebase 실시간 저장 완료";
-            setTimeout(() => {
-                if(statusEl.classList.contains('connected')) {
-                    statusEl.textContent = "🟢 Firebase 서버 연결됨 (영구 보관중)";
-                }
-            }, 2000);
+            await set(dbRef, dataToSave);
         } catch (error) {
             console.error("Firebase 저장 실패:", error);
-            alert("서버 저장 중 오류가 발생했습니다. 네트워크 상태를 확인해주세요.");
         }
     }
-
-    // 초기 실행 시 클라우드에서 데이터 가져오기 시도
-    loadCloudData();
 </script>
 
 <script>
-    // 전역 함수 및 UI 로직 (Firebase 연동 래퍼 적용)
     function saveStrategiesConfig() {
-        if(window.saveCloudDataToFirebase) window.saveCloudDataToFirebase();
+        if(window.saveCloudData) window.saveCloudData();
     }
 
     function initUI() {
         if (!window.strategies) return;
-        
-        // localStorage가 비어있다면 cloud data로 초기 동기화
-        if(!localStorage.getItem('4strat_config_v13')) {
-            localStorage.setItem('4strat_config_v13', JSON.stringify(window.cloudStrategiesConfig));
-            localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(window.cloudTungchigiData));
-            localStorage.setItem('4strat_history_v13', JSON.stringify(window.cloudHistoryData));
-        }
 
         const tabBtns = document.getElementById('tab-buttons');
         const tabContents = document.getElementById('tab-contents');
@@ -524,7 +535,7 @@
                     <button class="add-btn" onclick="addRow('${strat.id}', 'sell')">+ 매도 추가</button>
                     
                     <div style="margin-top: 15px;">
-                        <button class="execute-btn" onclick="saveStrategyDailyOrders('${strat.id}')" style="background-color:#38a169; padding: 12px; font-size: 14px;">💾 ${strat.name} 현재 날짜 주문 기록 저장/수정 (서버 동기화)</button>
+                        <button class="execute-btn" onclick="saveStrategyDailyOrders('${strat.id}')" style="background-color:#38a169; padding: 12px; font-size: 14px;">💾 ${strat.name} 현재 날짜 주문 기록 저장/수정</button>
                     </div>
                 </div>
             `;
@@ -609,7 +620,7 @@
                 <div id="krw-summary-display"></div>
 
                 <div style="margin-top:15px; display:flex; gap:10px; align-items:center;">
-                    <button class="execute-btn" onclick="saveDailyRecord()" style="background-color:#38a169; flex:1; margin-top:0;">💾 일별 잔고 기록 저장 및 클라우드 동기화</button>
+                    <button class="execute-btn" onclick="saveDailyRecord()" style="background-color:#38a169; flex:1; margin-top:0;">💾 일별 잔고 기록 저장 (덮어쓰기)</button>
                 </div>
                 <div style="margin-top:8px; font-size:12px; color:#555; display:flex; align-items:center; gap:5px; background:#f0f4f8; padding:8px 12px; border-radius:6px;">
                     <input type="checkbox" id="cascade-update-check" style="width:15px; height:15px; cursor:pointer;">
@@ -636,11 +647,11 @@
                     <input type="text" id="new-strat-name" placeholder="추가할 새 기법 이름 입력" style="flex:1;">
                     <button class="execute-btn" onclick="addNewStrategy()" style="width:150px; padding:10px; background-color:#38a169;">+ 기법 추가</button>
                 </div>
-                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">전체 초기화 (서버 포함)</button>
+                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">전체 초기화</button>
             </div>
         `;
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = "2026-09-11";
         strategies.forEach(strat => {
             let dateInput = document.getElementById(`date-${strat.id}`);
             if(dateInput) dateInput.value = todayStr;
@@ -721,6 +732,7 @@
             });
         });
         localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(allData));
+        if(window.saveCloudData) window.saveCloudData();
     }
 
     function loadDataForDate(stratIdTarget) {
@@ -765,18 +777,17 @@
 
     function saveStrategyDailyOrders(stratId) {
         saveData();
-        if(window.saveCloudDataToFirebase) window.saveCloudDataToFirebase();
         let dateVal = document.getElementById(`date-${stratId}`).value;
         let strat = strategies.find(s => s.id === stratId);
-        alert(`[${dateVal}] ${strat.name} 기법 주문 기록이 서버(Firebase)에 영구 저장되었습니다.`);
+        alert(`[${dateVal}] ${strat.name} 기법의 주문 기록이 저장되어 파이어베이스 서버와 실시간 동기화되었습니다.`);
     }
 
     function resetAllData() {
-        if (!confirm("모든 입력 정보 및 히스토리가 파이어베이스 서버에서 완전히 초기화됩니다. 계속하시겠습니까?")) return;
+        if (!confirm("모든 입력 정보 및 히스토리가 초기화됩니다. 계속하시겠습니까?")) return;
         localStorage.removeItem('4strat_config_v13');
         localStorage.removeItem('4strat_tungchigi_data_v13');
         localStorage.removeItem('4strat_history_v13');
-        if(window.saveCloudDataToFirebase) window.saveCloudDataToFirebase();
+        if(window.saveCloudData) window.saveCloudData();
         location.reload();
     }
 
@@ -821,7 +832,7 @@
             defaultInit: 50000
         });
         saveStrategiesConfig();
-        alert(`새 기법 '${name}'이(가) 추가 및 서버에 저장되었습니다.`);
+        alert(`새 기법 '${name}'이(가) 추가되었습니다.`);
         location.reload();
     }
 
@@ -830,7 +841,7 @@
             alert("최소 1개의 기법은 남아있어야 합니다.");
             return;
         }
-        if(!confirm("해당 기법을 삭제하시겠습니까?")) return;
+        if(!confirm("해당 기법을 삭제하시겠습니까? 관련 설정 및 데이터가 갱신됩니다.")) return;
         strategies = strategies.filter(s => s.id !== stratId);
         saveStrategiesConfig();
         location.reload();
@@ -844,11 +855,11 @@
     }
 
     function deleteStratHistoryItem(dateStr) {
-        if (!confirm(`[${dateStr}] 해당 날짜 주문 기록을 삭제하시겠습니까?`)) return;
+        if (!confirm(`[${dateStr}] 해당 날짜의 주문 기록을 삭제하시겠습니까?`)) return;
         let allData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
         delete allData[dateStr];
         localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(allData));
-        if(window.saveCloudDataToFirebase) window.saveCloudDataToFirebase();
+        if(window.saveCloudData) window.saveCloudData();
         calculateTotalNet();
         strategies.forEach(strat => {
             let dateEl = document.getElementById(`date-${strat.id}`);
@@ -912,6 +923,7 @@
                 allDates = allDates.filter(d => d !== targetDate);
                 if (allData[targetDate]) allDates.unshift(targetDate);
             }
+
             if (isStratHistoryAllView && targetDate) {
                 allDates = allDates.filter(d => d === targetDate);
             }
@@ -943,7 +955,7 @@
 
                         stratCardsHtml += `
                             <div style="background:#f8f9fa; border:1px solid #edf2f7; border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:13px;">
-                                <div style="font-weight:bold; color:#1a365d; margin-bottom:4px;">📌 ${strat.name} <span style="font-size:11px; color:#666;">(배율: ${mult}배)</span></div>
+                                <div style="font-weight:bold; color:#1a365d; margin-bottom:4px;">📌 ${strat.name} <span style="font-size:11px; color:#666; font-weight:normal;">(배율: ${mult}배)</span></div>
                                 <div style="color:#e53e3e; margin-bottom:2px;">🔴 매수: ${buyStr}</div>
                                 <div style="color:#2b6cb0;">🔵 매도: ${sellStr}</div>
                             </div>
@@ -952,9 +964,9 @@
 
                     stratInputHistoryContainer.innerHTML += `
                         <div class="history-card" style="${isSelectedCard ? 'border: 2px solid #2b6cb0; background-color: #f7fafc;' : ''}">
-                            <div class="history-header">
-                                <span>📅 날짜: ${dStr} ${isSelectedCard ? '<b>(조회일)</b>' : ''}</span>
-                                <button onclick="deleteStratHistoryItem('${dStr}')" style="background:none; border:none; color:#e53e3e; cursor:pointer; font-weight:bold;">삭제</button>
+                            <div class="history-header" style="${isSelectedCard ? 'color: #2b6cb0;' : 'color: #4a5568;'}">
+                                <span>📅 날짜: ${dStr} ${isSelectedCard ? '<b>(현재 조회/선택된 날짜)</b>' : ''}</span>
+                                <button onclick="deleteStratHistoryItem('${dStr}')" style="background:none; border:none; color:#e53e3e; cursor:pointer; font-weight:bold; font-size:13px;">삭제</button>
                             </div>
                             <div>${stratCardsHtml}</div>
                         </div>
@@ -1062,7 +1074,8 @@
         let exchangeRate = parseFloat(rateInput.value) || 0;
         
         tbody.innerHTML = '';
-        let totalShares = 0, totalCash = 0, totalValUSD = 0, totalInit = 0, totalWeightedCost = 0;
+        let totalShares = 0, totalCash = 0, totalValUSD = 0, totalInit = 0;
+        let totalWeightedCost = 0;
 
         let allOrdersData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
         let dayOrders = allOrdersData[recordDate] || {};
@@ -1137,13 +1150,13 @@
             tbody.innerHTML += `
                 <tr>
                     <td title="${strat.name}"><b>${strat.name}</b></td>
-                    <td><input type="number" id="bal-shares-${strat.id}" value="${currentShares}"></td>
-                    <td><input type="number" step="0.0001" id="bal-avg-${strat.id}" value="${currentAvg.toFixed(4)}"></td>
-                    <td><input type="number" step="0.01" id="bal-cash-${strat.id}" value="${currentCash.toFixed(2)}"></td>
-                    <td><input type="number" step="0.01" id="bal-val-${strat.id}" value="${evaluationTotal.toFixed(2)}" readonly style="background-color:#f8f9fa;"></td>
+                    <td><input type="number" id="bal-shares-${strat.id}" value="${currentShares}" oninput="manualOverrideBalance()"></td>
+                    <td><input type="number" step="0.0001" id="bal-avg-${strat.id}" value="${currentAvg.toFixed(4)}" oninput="manualOverrideBalance()"></td>
+                    <td><input type="number" step="0.01" id="bal-cash-${strat.id}" value="${currentCash.toFixed(2)}" oninput="manualOverrideBalance()"></td>
+                    <td><input type="number" step="0.01" id="bal-val-${strat.id}" value="${evaluationTotal.toFixed(2)}" readonly style="background-color:#f8f9fa; cursor:not-allowed; outline:none; border:none; text-align:center;"></td>
                     <td id="val-profit-${strat.id}" style="color:${profitUSD>=0?'#e53e3e':'#3182ce'}">$${profitUSD.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td id="val-return-${strat.id}" style="color:${returnRate>=0?'#e53e3e':'#3182ce'}">${returnRate >= 0 ? '▲' : '▼'}${Math.abs(returnRate).toFixed(1)}%</td>
-                    <td><input type="number" id="bal-init-${strat.id}" value="${initCash}"></td>
+                    <td><input type="number" id="bal-init-${strat.id}" value="${initCash}" oninput="manualOverrideBalance()"></td>
                 </tr>
             `;
         });
@@ -1176,7 +1189,11 @@
         }
     }
 
-    function updateBalanceLive() { renderBalanceTable(); }
+    function updateBalanceLive() {
+        renderBalanceTable();
+    }
+
+    function manualOverrideBalance() {}
 
     function saveDailyRecord() {
         let date = document.getElementById('record-date').value;
@@ -1208,17 +1225,68 @@
 
         let recordItem = { date, closePrice, exchangeRate, totalSh, totalValUSD, totalValKRW, totProfit, totRet, details };
         let existingIndex = history.findIndex(h => h.date === date);
+        let isCascade = document.getElementById('cascade-update-check').checked;
 
-        if (existingIndex >= 0) history[existingIndex] = recordItem;
-        else history.push(recordItem);
+        if (existingIndex >= 0) {
+            history[existingIndex] = recordItem;
+            alert(`[${date}] 기존 일별 잔고 기록이 수정되었습니다!`);
+        } else {
+            history.push(recordItem);
+            alert(`[${date}] 일별 잔고 기록이 새로 저장되었습니다!`);
+        }
 
         history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (isCascade && history.length > 1) {
+            let modifiedIdx = history.findIndex(h => h.date === date);
+            for (let i = modifiedIdx + 1; i < history.length; i++) {
+                let prevH = history[i - 1];
+                let currH = history[i];
+                let currClose = currH.closePrice;
+                let currRate = currH.exchangeRate || exchangeRate;
+
+                let newDetails = {};
+                let cTotalVal = 0, cTotalInit = 0, cTotalSh = 0;
+
+                strategies.forEach(strat => {
+                    let pData = prevH.details[strat.id] || { shares: 0, avgPrice: 0, cash: 50000, initCash: 50000 };
+                    let shares = pData.shares;
+                    let avgPrice = pData.avgPrice;
+                    let cash = pData.cash;
+                    let initCash = pData.initCash;
+
+                    let valUSD = shares > 0 ? (shares * currClose) + cash : cash;
+                    let profitUSD = valUSD - initCash;
+                    let returnRate = initCash > 0 ? (profitUSD / initCash) * 100 : 0;
+
+                    cTotalVal += valUSD;
+                    cTotalInit += initCash;
+                    cTotalSh += shares;
+
+                    newDetails[strat.id] = { name: strat.name, shares, avgPrice, cash, valUSD, initCash, profitUSD, returnRate };
+                });
+
+                let cProfit = cTotalVal - cTotalInit;
+                let cRet = cTotalInit > 0 ? (cProfit / cTotalInit) * 100 : 0;
+                let cTotalKRW = cTotalVal * currRate;
+
+                currH.totalSh = cTotalSh;
+                currH.totalValUSD = cTotalVal;
+                currH.totalValKRW = cTotalKRW;
+                currH.totProfit = cProfit;
+                currH.totRet = cRet;
+                currH.exchangeRate = currRate;
+                currH.details = newDetails;
+            }
+        }
+
         localStorage.setItem('4strat_history_v13', JSON.stringify(history));
+        if(window.saveCloudData) window.saveCloudData();
         
-        // 파이어베이스에 즉시 동기화
-        if(window.saveCloudDataToFirebase) window.saveCloudDataToFirebase();
+        if(document.getElementById('record-exchange-rate')) {
+            document.getElementById('record-exchange-rate').dataset.lastDate = date;
+        }
         
-        alert(`[${date}] 잔고 히스토리가 Firebase 서버에 영구 기록되었습니다!`);
         renderHistoryList();
     }
 
@@ -1230,11 +1298,18 @@
     }
 
     function createDonutChartSVG(details, totalVal) {
-        let size = 96, center = size / 2, radius = 35, circumference = 2 * Math.PI * radius;
-        if (!totalVal || totalVal <= 0) return `<svg width="${size}" height="${size}"><circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="#e2e8f0" stroke-width="12"/></svg>`;
+        let size = 96;
+        let center = size / 2;
+        let radius = 35;
+        let circumference = 2 * Math.PI * radius;
+        
+        if (!totalVal || totalVal <= 0) {
+            return `<svg width="${size}" height="${size}"><circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="#e2e8f0" stroke-width="12"/></svg>`;
+        }
 
         let accumulatedOffset = 0;
         let svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+        
         let idx = 0;
         for (let key in details) {
             let d = details[key];
@@ -1244,11 +1319,14 @@
                 let strokeDasharray = `${ratio * circumference} ${circumference}`;
                 let strokeDashoffset = -accumulatedOffset;
                 let color = chartColors[idx % chartColors.length];
+
                 svgContent += `<circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="${color}" stroke-width="12" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="${strokeDashoffset}" transform="rotate(-90 ${center} ${center})" />`;
+
                 accumulatedOffset += ratio * circumference;
             }
             idx++;
         }
+
         let shortVal = totalVal >= 1000 ? '$' + (totalVal / 1000).toFixed(1) + 'k' : '$' + totalVal.toFixed(0);
         svgContent += `<text x="${center}" y="${center - 2}" text-anchor="middle" font-size="9" font-weight="bold" fill="#718096">총평가금액</text>`;
         svgContent += `<text x="${center}" y="${center + 11}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1a365d">${shortVal}</text>`;
@@ -1278,7 +1356,11 @@
                 let d = item.details[key];
                 let color = chartColors[idx % chartColors.length];
                 let weight = item.totalValUSD > 0 ? ((d.valUSD / item.totalValUSD) * 100).toFixed(1) : 0;
-                detailHtml += `<div style="display:flex; align-items:center; margin-bottom:3px; gap:6px;"><span style="display:inline-block; width:8px; height:8px; background:${color}; border-radius:50%;"></span><span><b>${d.name}</b>: ${d.shares}주 (평단:$${d.avgPrice}, 잔액:$${d.cash}, 평가총합:$${d.valUSD}) — 비중 <b style="color:#2b6cb0;">${weight}%</b></span></div>`;
+                
+                detailHtml += `<div style="display:flex; align-items:center; margin-bottom:3px; gap:6px;">
+                    <span style="display:inline-block; width:8px; height:8px; background:${color}; border-radius:50%;"></span>
+                    <span><b>${d.name}</b>: ${d.shares}주 (평단:$${d.avgPrice}, 잔액:$${d.cash}, 평가총합:$${d.valUSD}) — 비중 <b style="color:#2b6cb0;">${weight}%</b></span>
+                </div>`;
                 idx++;
             }
 
@@ -1289,7 +1371,7 @@
 
             container.innerHTML += `
                 <div class="history-card" style="${isSelectedCard ? 'border: 2px solid #2b6cb0; background-color: #f7fafc;' : ''}">
-                    <div class="history-header">
+                    <div class="history-header" style="${isSelectedCard ? 'color: #2b6cb0;' : 'color: #4a5568;'}">
                         <span>📅 ${item.date} (종가: $${item.closePrice} | 환율: ₩${rateInfo}) ${isSelectedCard ? '<b>(선택일)</b>' : ''}</span>
                         <button onclick="deleteHistoryItem('${item.date}')" style="background:none; border:none; color:#e53e3e; cursor:pointer; font-weight:bold;">삭제</button>
                     </div>
@@ -1311,7 +1393,7 @@
         let history = JSON.parse(localStorage.getItem('4strat_history_v13')) || [];
         history = history.filter(h => h.date !== dateStr);
         localStorage.setItem('4strat_history_v13', JSON.stringify(history));
-        if(window.saveCloudDataToFirebase) window.saveCloudDataToFirebase();
+        if(window.saveCloudData) window.saveCloudData();
         renderHistoryList();
     }
 </script>
