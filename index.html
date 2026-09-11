@@ -374,6 +374,11 @@
             align-items: center;
         }
     </style>
+
+    <!-- Firebase App (핵심 라이브러리) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <!-- Firebase Realtime Database -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -393,15 +398,8 @@
     <div id="tab-contents"></div>
 </div>
 
-<!-- Firebase SDK 및 안전한 비동기 로딩 로직 -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-    const firebaseConfig = {
-        databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-southeast1.firebasedatabase.app"
-    };
-
+<script>
+    // 1. 변수 선언 (가장 먼저 실행되어 에러 방지)
     const defaultStrategies = [
         { id: 'strat1', name: '스위치', defaultMult: 1, defaultCash: 72134.02, defaultShares: 0, defaultAvg: 0, defaultInit: 60000 },
         { id: 'strat2', name: '동파', defaultMult: 6, defaultCash: 68490.00, defaultShares: 90, defaultAvg: 125.87, defaultInit: 60000 },
@@ -410,85 +408,22 @@
         { id: 'strat5', name: '방어', defaultMult: 1, defaultCash: 50000.00, defaultShares: 0, defaultAvg: 0, defaultInit: 50000 }
     ];
 
-    window.strategies = JSON.parse(localStorage.getItem('4strat_config_v13')) || defaultStrategies;
-    window.chartColors = ['#2b6cb0', '#e53e3e', '#d69e2e', '#38a169', '#805ad5', '#319795', '#dd6b20'];
-    window.isStratHistoryAllView = false;
-    window.isBalanceHistoryAllView = false;
+    let strategies = JSON.parse(localStorage.getItem('4strat_config_v13')) || defaultStrategies;
+    let chartColors = ['#2b6cb0', '#e53e3e', '#d69e2e', '#38a169', '#805ad5', '#319795', '#dd6b20'];
+    let isStratHistoryAllView = false;
+    let isBalanceHistoryAllView = false;
 
-    // 즉시 UI 렌더링 (로딩 대기 방지)
-    if (typeof initUI === 'function') {
-        initUI();
-    }
+    // 2. 파이어베이스 초기화
+    const firebaseConfig = {
+        databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-southeast1.firebasedatabase.app"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const dbRef = firebase.database().ref('sd3p_app_data');
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const dbRef = ref(db, 'sd3p_app_data');
-
-    // 한 번만 데이터를 가져오는 비동기 방식 (무한 대기 원천 차단)
-    get(dbRef).then((snapshot) => {
-        const statusEl = document.getElementById('firebase-status');
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            if (data.strategies) {
-                window.strategies = data.strategies;
-                localStorage.setItem('4strat_config_v13', JSON.stringify(data.strategies));
-            }
-            if (data.tungchigiData) {
-                localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(data.tungchigiData));
-            }
-            if (data.historyData) {
-                localStorage.setItem('4strat_history_v13', JSON.stringify(data.historyData));
-            }
-            if (typeof initUI === 'function') initUI();
-        } else {
-            saveCloudData();
-        }
-
-        if (statusEl) {
-            statusEl.className = "firebase-badge connected";
-            statusEl.innerHTML = '<span class="firebase-dot"></span>파이어베이스 서버 연동 완료';
-        }
-    }).catch((error) => {
-        console.warn("서버 연결 실패, 오프라인 모드로 실행:", error);
-        setOfflineMode();
-    });
-
-    window.saveCloudData = async function() {
-        const dataToSave = {
-            strategies: window.strategies,
-            tungchigiData: JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13') || '{}'),
-            historyData: JSON.parse(localStorage.getItem('4strat_history_v13') || '[]')
-        };
-        try {
-            await set(dbRef, dataToSave);
-            const statusEl = document.getElementById('firebase-status');
-            if (statusEl) {
-                statusEl.className = "firebase-badge connected";
-                statusEl.innerHTML = '<span class="firebase-dot"></span>서버 동기화 완료';
-            }
-        } catch (error) {
-            console.error("클라우드 저장 실패:", error);
-            setOfflineMode();
-        }
-    }
-
-    function setOfflineMode() {
-        const statusEl = document.getElementById('firebase-status');
-        if (statusEl) {
-            statusEl.className = "firebase-badge disconnected";
-            statusEl.innerHTML = '<span class="firebase-dot"></span>오프라인 모드 (로컬 저장 중)';
-        }
-    }
-</script>
-
-<script>
-    function saveStrategiesConfig() {
-        if(window.saveCloudData) window.saveCloudData();
-    }
-
+    // ==========================================
+    // UI 관련 함수들 시작
+    // ==========================================
     function initUI() {
-        if (!window.strategies) return;
-
         const tabBtns = document.getElementById('tab-buttons');
         const tabContents = document.getElementById('tab-contents');
         if (!tabBtns || !tabContents) return;
@@ -647,7 +582,8 @@
             </div>
         `;
 
-        const todayStr = "2026-09-12";
+        // 오늘 날짜로 기본 셋팅
+        let todayStr = new Date().toISOString().split('T')[0];
         strategies.forEach(strat => {
             let dateInput = document.getElementById(`date-${strat.id}`);
             if(dateInput) dateInput.value = todayStr;
@@ -785,6 +721,10 @@
         localStorage.removeItem('4strat_history_v13');
         if(window.saveCloudData) window.saveCloudData();
         location.reload();
+    }
+
+    function saveStrategiesConfig() {
+        if(window.saveCloudData) window.saveCloudData();
     }
 
     function renderStrategyManageList() {
@@ -1391,6 +1331,51 @@
         localStorage.setItem('4strat_history_v13', JSON.stringify(history));
         if(window.saveCloudData) window.saveCloudData();
         renderHistoryList();
+    }
+
+    // ==========================================
+    // 앱 실행 트리거 (절대 멈추지 않게 즉시 실행)
+    // ==========================================
+    
+    // 1. 화면부터 무조건 그린다.
+    initUI();
+
+    // 2. 그 다음 뒷단에서 조용히 파이어베이스 클라우드 데이터를 가져온다.
+    dbRef.once('value').then((snapshot) => {
+        const statusEl = document.getElementById('firebase-status');
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            if (data.strategies) {
+                strategies = data.strategies;
+                localStorage.setItem('4strat_config_v13', JSON.stringify(strategies));
+            }
+            if (data.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(data.tungchigiData));
+            if (data.historyData) localStorage.setItem('4strat_history_v13', JSON.stringify(data.historyData));
+            
+            // 데이터 가져왔으니 화면 한 번 새로고침
+            initUI(); 
+        }
+        if(statusEl) {
+            statusEl.className = "firebase-badge connected";
+            statusEl.innerHTML = '<span class="firebase-dot"></span>서버 연동 완료';
+        }
+    }).catch((error) => {
+        console.warn("오프라인 모드로 실행:", error);
+        const statusEl = document.getElementById('firebase-status');
+        if(statusEl) {
+            statusEl.className = "firebase-badge disconnected";
+            statusEl.innerHTML = '<span class="firebase-dot"></span>오프라인 모드';
+        }
+    });
+
+    // 3. 데이터 저장 시 클라우드로 쏴주는 함수
+    window.saveCloudData = function() {
+        const dataToSave = {
+            strategies: strategies,
+            tungchigiData: JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13') || '{}'),
+            historyData: JSON.parse(localStorage.getItem('4strat_history_v13') || '[]')
+        };
+        dbRef.set(dataToSave).catch(e => console.warn("서버 저장 실패", e));
     }
 </script>
 </body>
