@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4대 기법 통합 퉁치기 & 잔고 일별 기록</title>
+    <title>4대 기법 통합 퉁치기 & 잔고 일별 기록 (실시간 공유)</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -28,6 +28,33 @@
         }
         .header h1 { font-size: 26px; margin-bottom: 8px; color: #1a365d; }
         .header p { font-size: 13px; color: #888; }
+
+        /* 실시간 상태 표시 배지 */
+        .sync-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            color: #2b6cb0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .sync-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #3182ce;
+            border-radius: 50%;
+            animation: pulse 1.5px infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
 
         /* 탭 디자인 */
         .tabs {
@@ -350,14 +377,10 @@
 <div class="container">
     <div class="header">
         <h1>통합 퉁치기 & 잔고 일별 기록</h1>
-        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 잔고 연동 시스템 (REV.1.8)</p>
-    </div>
-
-    <!-- 상단 데이터 백업/복원 바 추가 -->
-    <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:15px;">
-        <button onclick="exportData()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#2b6cb0;">💾 데이터 백업(내보내기)</button>
-        <button onclick="document.getElementById('import-file-input').click()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#276749;">📂 데이터 불러오기(복원)</button>
-        <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
+        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 실시간 클라우드 공유 시스템 (REV.2.0)</p>
+        <div class="sync-badge">
+            <span class="sync-dot"></span> 파이어베이스 실시간 서버 연동 완료
+        </div>
     </div>
 
     <!-- 탭 버튼 -->
@@ -367,8 +390,27 @@
     <div id="tab-contents"></div>
 </div>
 
-<script>
-    let strategies = JSON.parse(localStorage.getItem('4strat_config_v13')) || [
+<!-- Firebase SDK (Modular CDN) -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0LJvV0KxVg5LHl0KXemkJpzP0V6ThgWg",
+        authDomain: "sd3p-1b9e7.firebaseapp.com",
+        databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-northeast1.firebasestorage.app",
+        projectId: "sd3p-1b9e7",
+        storageBucket: "sd3p-1b9e7.firebasestorage.app",
+        messagingSenderId: "900680392993",
+        appId: "1:900680392993:web:6ffc245be1a4464c735e60",
+        measurementId: "G-FWTB8R1Q15"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 기본 데이터 정의
+    let defaultStrategies = [
         { id: 'strat1', name: '스위치', defaultMult: 1, defaultCash: 72134.02, defaultShares: 0, defaultAvg: 0, defaultInit: 60000 },
         { id: 'strat2', name: '동파', defaultMult: 6, defaultCash: 68490.00, defaultShares: 90, defaultAvg: 125.87, defaultInit: 60000 },
         { id: 'strat3', name: '3쥐', defaultMult: 6, defaultCash: 49428.00, defaultShares: 12, defaultAvg: 123.31, defaultInit: 60000 },
@@ -376,51 +418,76 @@
         { id: 'strat5', name: '방어', defaultMult: 1, defaultCash: 50000.00, defaultShares: 0, defaultAvg: 0, defaultInit: 50000 }
     ];
 
+    let strategies = [];
+    let tungchigiData = {};
+    let historyData = [];
+
     const chartColors = ['#2b6cb0', '#e53e3e', '#d69e2e', '#38a169', '#805ad5', '#319795', '#dd6b20'];
 
-    function saveStrategiesConfig() {
-        localStorage.setItem('4strat_config_v13', JSON.stringify(strategies));
+    // 파이어베이스에서 실시간 데이터 불러오기 리스너 연결
+    const dbRef = ref(db, 'appData');
+    onValue(dbRef, (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+            strategies = val.strategies || defaultStrategies;
+            tungchigiData = val.tungchigiData || {};
+            historyData = val.history || [];
+        } else {
+            strategies = defaultStrategies;
+            tungchigiData = {};
+            historyData = [];
+            syncToCloud(); // 최초 기본값 업로드
+        }
+        initUI();
+    });
+
+    function syncToCloud() {
+        set(ref(db, 'appData'), {
+            strategies: strategies,
+            tungchigiData: tungchigiData,
+            history: historyData
+        }).catch((error) => {
+            console.error("클라우드 저장 실패:", error);
+        });
     }
 
-    // 백업(내보내기) 기능
-    function exportData() {
-        let exportObj = {
-            config: localStorage.getItem('4strat_config_v13'),
-            tungchigiData: localStorage.getItem('4strat_tungchigi_data_v13'),
-            history: localStorage.getItem('4strat_history_v13')
-        };
-        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
-        let downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `trading_backup_${new Date().toISOString().slice(0,10)}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-    }
+    window.saveData = function() {
+        strategies.forEach(strat => {
+            let dateEl = document.getElementById(`date-${strat.id}`);
+            let multEl = document.getElementById(`mult-${strat.id}`);
+            if(!dateEl) return;
+            let dateVal = dateEl.value;
+            let multVal = multEl ? (parseFloat(multEl.value) || 1) : 1;
+            
+            if(!tungchigiData[dateVal]) tungchigiData[dateVal] = {};
+            tungchigiData[dateVal][strat.id] = { mult: multVal, buys: [], sells: [] };
 
-    // 복원(불러오기) 기능
-    function importData(event) {
-        let file = event.target.files[0];
-        if (!file) return;
-        let reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                let importedObj = JSON.parse(e.target.result);
-                if(importedObj.config) localStorage.setItem('4strat_config_v13', importedObj.config);
-                if(importedObj.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', importedObj.tungchigiData);
-                if(importedObj.history) localStorage.setItem('4strat_history_v13', importedObj.history);
-                alert("데이터가 성공적으로 복원되었습니다! 페이지가 새로고침됩니다.");
-                location.reload();
-            } catch(err) {
-                alert("올바른 백업 파일 형식이 아닙니다.");
-            }
-        };
-        reader.readAsText(file);
+            document.querySelectorAll(`#buy-container-${strat.id} .order-row`).forEach(row => {
+                let p = row.querySelector('.buy-price').value;
+                let q = row.querySelector('.buy-qty').value;
+                tungchigiData[dateVal][strat.id].buys.push({ price: p, qty: q });
+            });
+
+            document.querySelectorAll(`#sell-container-${strat.id} .order-row`).forEach(row => {
+                let p = row.querySelector('.sell-price').value;
+                let q = row.querySelector('.sell-qty').value;
+                let m = row.querySelector('.sell-moc').checked;
+                tungchigiData[dateVal][strat.id].sells.push({ price: p, qty: q, isMoc: m });
+            });
+        });
+        syncToCloud();
     }
 
     function initUI() {
         const tabBtns = document.getElementById('tab-buttons');
         const tabContents = document.getElementById('tab-contents');
+        if(!tabBtns || !tabContents) return;
+
+        // 현재 활성화된 탭 기억
+        let activeTabIdx = 0;
+        document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+            if(btn.classList.contains('active')) activeTabIdx = idx;
+        });
 
         tabBtns.innerHTML = '';
         tabContents.innerHTML = '';
@@ -460,7 +527,7 @@
                     <button class="add-btn" onclick="addRow('${strat.id}', 'sell')">+ 매도 추가</button>
                     
                     <div style="margin-top: 15px;">
-                        <button class="execute-btn" onclick="saveStrategyDailyOrders('${strat.id}')" style="background-color:#38a169; padding: 12px; font-size: 14px;">💾 ${strat.name} 현재 날짜 주문 기록 저장/수정</button>
+                        <button class="execute-btn" onclick="saveStrategyDailyOrders('${strat.id}')" style="background-color:#38a169; padding: 12px; font-size: 14px;">💾 ${strat.name} 현재 날짜 주문 기록 저장/수정 (실시간 동기화)</button>
                     </div>
                 </div>
             `;
@@ -547,11 +614,11 @@
                 <div id="krw-summary-display"></div>
 
                 <div style="margin-top:15px; display:flex; gap:10px; align-items:center;">
-                    <button class="execute-btn" onclick="saveDailyRecord()" style="background-color:#38a169; flex:1; margin-top:0;">💾 일별 잔고 기록 저장 (덮어쓰기)</button>
+                    <button class="execute-btn" onclick="saveDailyRecord()" style="background-color:#38a169; flex:1; margin-top:0;">💾 일별 잔고 기록 저장 (실시간 동기화)</button>
                 </div>
                 <div style="margin-top:8px; font-size:12px; color:#555; display:flex; align-items:center; gap:5px; background:#f0f4f8; padding:8px 12px; border-radius:6px;">
                     <input type="checkbox" id="cascade-update-check" style="width:15px; height:15px; cursor:pointer;">
-                    <label for="cascade-update-check" style="cursor:pointer; font-weight:bold; color:#2b6cb0;">과거 날짜 수정 시, 이후 등록된 모든 일별 히스토리도 바뀐 데이터를 기준으로 연쇄 재계산(업데이트)하기</label>
+                    <label for="cascade-update-check" style="cursor:pointer; font-weight:bold; color:#2b6cb0;">과거 날짜 수정 시, 이후 등록된 모든 일별 히스토리도 바뀐 데이터를 기준으로 연쇄 재계산</label>
                 </div>
 
                 <hr style="margin: 25px 0; border:0; border-top:1px solid #eee;">
@@ -575,24 +642,25 @@
                     <input type="text" id="new-strat-name" placeholder="추가할 새 기법 이름 입력" style="flex:1;">
                     <button class="execute-btn" onclick="addNewStrategy()" style="width:150px; padding:10px; background-color:#38a169;">+ 기법 추가</button>
                 </div>
-                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">전체 초기화</button>
+                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">전체 초기화 (서버 데이터 삭제)</button>
             </div>
         `;
 
         strategies.forEach(strat => {
             let dateInput = document.getElementById(`date-${strat.id}`);
-            if(dateInput) dateInput.value = "2026-09-10";
+            if(dateInput) dateInput.value = "2026-09-11";
         });
-        if(document.getElementById('target-calc-date')) document.getElementById('target-calc-date').value = "2026-09-10";
-        if(document.getElementById('record-date')) document.getElementById('record-date').value = "2026-09-10";
+        if(document.getElementById('target-calc-date')) document.getElementById('target-calc-date').value = "2026-09-11";
+        if(document.getElementById('record-date')) document.getElementById('record-date').value = "2026-09-11";
 
         loadDataForDate(null);
         renderStrategyManageList();
         renderBalanceTable();
         renderHistoryList();
+        switchTab(activeTabIdx);
     }
 
-    function switchTab(index) {
+    window.switchTab = function(index) {
         document.querySelectorAll('.tab-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === index));
         document.querySelectorAll('.tab-content').forEach((content, idx) => content.classList.toggle('active', idx === index));
         let balIdx = strategies.length + 1;
@@ -601,7 +669,7 @@
         if (index === resIdx) calculateTotalNet();
     }
 
-    function addRow(stratId, type, price = '', qty = '', isMoc = false) {
+    window.addRow = function(stratId, type, price = '', qty = '', isMoc = false) {
         const container = document.getElementById(`${type}-container-${stratId}`);
         if(!container) return;
         const isSell = type === 'sell';
@@ -622,7 +690,7 @@
         if(price === '' && qty === '') saveData(); 
     }
 
-    function removeRow(button, stratId, type) {
+    window.removeRow = function(button, stratId, type) {
         button.closest('.order-row').remove();
         updateRowNumbers(stratId, type);
         saveData();
@@ -633,36 +701,7 @@
         rows.forEach((row, index) => row.querySelector('.order-num').textContent = index + 1);
     }
 
-    function saveData() {
-        let allData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
-        strategies.forEach(strat => {
-            let dateEl = document.getElementById(`date-${strat.id}`);
-            let multEl = document.getElementById(`mult-${strat.id}`);
-            if(!dateEl) return;
-            let dateVal = dateEl.value;
-            let multVal = multEl ? (parseFloat(multEl.value) || 1) : 1;
-            
-            if(!allData[dateVal]) allData[dateVal] = {};
-            allData[dateVal][strat.id] = { mult: multVal, buys: [], sells: [] };
-
-            document.querySelectorAll(`#buy-container-${strat.id} .order-row`).forEach(row => {
-                let p = row.querySelector('.buy-price').value;
-                let q = row.querySelector('.buy-qty').value;
-                allData[dateVal][strat.id].buys.push({ price: p, qty: q });
-            });
-
-            document.querySelectorAll(`#sell-container-${strat.id} .order-row`).forEach(row => {
-                let p = row.querySelector('.sell-price').value;
-                let q = row.querySelector('.sell-qty').value;
-                let m = row.querySelector('.sell-moc').checked;
-                allData[dateVal][strat.id].sells.push({ price: p, qty: q, isMoc: m });
-            });
-        });
-        localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(allData));
-    }
-
     function loadDataForDate(stratIdTarget) {
-        let allData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
         strategies.forEach(strat => {
             if(stratIdTarget && strat.id !== stratIdTarget) return;
 
@@ -676,44 +715,45 @@
             if(buyContainer) buyContainer.innerHTML = '';
             if(sellContainer) sellContainer.innerHTML = '';
 
-            let dayData = allData[dateVal] && allData[dateVal][strat.id] ? allData[dateVal][strat.id] : null;
+            let dayData = tungchigiData[dateVal] && tungchigiData[dateVal][strat.id] ? tungchigiData[dateVal][strat.id] : null;
 
             if (dayData) {
                 if(multEl && dayData.mult) multEl.value = dayData.mult;
                 if(dayData.buys && dayData.buys.length > 0) {
-                    dayData.buys.forEach(b => addRow(strat.id, 'buy', b.price, b.qty));
+                    dayData.buys.forEach(b => window.addRow(strat.id, 'buy', b.price, b.qty));
                 } else {
-                    for(let i=0; i<3; i++) addRow(strat.id, 'buy');
+                    for(let i=0; i<3; i++) window.addRow(strat.id, 'buy');
                 }
                 if(dayData.sells && dayData.sells.length > 0) {
-                    dayData.sells.forEach(s => addRow(strat.id, 'sell', s.price, s.qty, s.isMoc));
+                    dayData.sells.forEach(s => window.addRow(strat.id, 'sell', s.price, s.qty, s.isMoc));
                 } else {
-                    for(let i=0; i<3; i++) addRow(strat.id, 'sell');
+                    for(let i=0; i<3; i++) window.addRow(strat.id, 'sell');
                 }
             } else {
-                for(let i=0; i<3; i++) addRow(strat.id, 'buy');
-                for(let i=0; i<3; i++) addRow(strat.id, 'sell');
+                for(let i=0; i<3; i++) window.addRow(strat.id, 'buy');
+                for(let i=0; i<3; i++) window.addRow(strat.id, 'sell');
             }
         });
     }
 
-    function onDateOrDataChanged(stratId) {
+    window.onDateOrDataChanged = function(stratId) {
         loadDataForDate(stratId);
     }
 
-    function saveStrategyDailyOrders(stratId) {
-        saveData();
+    window.saveStrategyDailyOrders = function(stratId) {
+        window.saveData();
         let dateVal = document.getElementById(`date-${stratId}`).value;
         let strat = strategies.find(s => s.id === stratId);
-        alert(`[${dateVal}] ${strat.name} 기법의 주문 기록이 저장/등록되었습니다.`);
+        alert(`[${dateVal}] ${strat.name} 기법의 주문 기록이 클라우드 서버에 실시간 저장되었습니다!`);
     }
 
-    function resetAllData() {
-        if (!confirm("모든 입력 정보 및 히스토리가 초기화됩니다. 계속하시겠습니까?")) return;
-        localStorage.removeItem('4strat_config_v13');
-        localStorage.removeItem('4strat_tungchigi_data_v13');
-        localStorage.removeItem('4strat_history_v13');
-        location.reload();
+    window.resetAllData = function() {
+        if (!confirm("서버의 모든 데이터가 초기화됩니다. 계속하시겠습니까?")) return;
+        strategies = defaultStrategies;
+        tungchigiData = {};
+        historyData = [];
+        syncToCloud();
+        alert("모든 데이터가 초기화되었습니다.");
     }
 
     function renderStrategyManageList() {
@@ -731,15 +771,15 @@
         });
     }
 
-    function updateStrategyName(stratId, newName) {
+    window.updateStrategyName = function(stratId, newName) {
         let strat = strategies.find(s => s.id === stratId);
         if(strat) {
             strat.name = newName;
-            saveStrategiesConfig();
+            syncToCloud();
         }
     }
 
-    function addNewStrategy() {
+    window.addNewStrategy = function() {
         let nameInput = document.getElementById('new-strat-name');
         let name = nameInput.value.trim();
         if(!name) {
@@ -756,46 +796,41 @@
             defaultAvg: 0,
             defaultInit: 50000
         });
-        saveStrategiesConfig();
+        syncToCloud();
         alert(`새 기법 '${name}'이(가) 추가되었습니다.`);
-        location.reload();
     }
 
-    function deleteStrategy(stratId) {
+    window.deleteStrategy = function(stratId) {
         if(strategies.length <= 1) {
             alert("최소 1개의 기법은 남아있어야 합니다.");
             return;
         }
-        if(!confirm("해당 기법을 삭제하시겠습니까? 관련 설정 및 데이터가 갱신됩니다.")) return;
+        if(!confirm("해당 기법을 삭제하시겠습니까?")) return;
         strategies = strategies.filter(s => s.id !== stratId);
-        saveStrategiesConfig();
-        location.reload();
+        syncToCloud();
     }
 
     let isStratHistoryAllView = false;
-    function toggleStratHistoryViewMode() {
+    window.toggleStratHistoryViewMode = function() {
         isStratHistoryAllView = !isStratHistoryAllView;
         let btn = document.getElementById('strat-history-toggle-btn');
         if(btn) btn.textContent = isStratHistoryAllView ? '전체보기 전환' : '조회일만 보기 전환';
-        calculateTotalNet();
+        window.calculateTotalNet();
     }
 
-    function deleteStratHistoryItem(dateStr) {
+    window.deleteStratHistoryItem = function(dateStr) {
         if (!confirm(`[${dateStr}] 해당 날짜의 주문 기록을 삭제하시겠습니까?`)) return;
-        let allData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
-        delete allData[dateStr];
-        localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(allData));
-        calculateTotalNet();
+        delete tungchigiData[dateStr];
+        syncToCloud();
         strategies.forEach(strat => {
             let dateEl = document.getElementById(`date-${strat.id}`);
             if(dateEl && dateEl.value === dateStr) loadDataForDate(strat.id);
         });
     }
 
-    function calculateTotalNet() {
+    window.calculateTotalNet = function() {
         let targetDate = document.getElementById('target-calc-date').value;
-        let allData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
-        let dayData = allData[targetDate] || {};
+        let dayData = tungchigiData[targetDate] || {};
 
         let rawBuys = [];
         let rawSells = [];
@@ -845,10 +880,10 @@
         if (stratInputHistoryContainer) {
             stratInputHistoryContainer.innerHTML = '';
             
-            let allDates = Object.keys(allData).sort((a, b) => new Date(b) - new Date(a));
+            let allDates = Object.keys(tungchigiData).sort((a, b) => new Date(b) - new Date(a));
             if (targetDate) {
                 allDates = allDates.filter(d => d !== targetDate);
-                if (allData[targetDate]) {
+                if (tungchigiData[targetDate]) {
                     allDates.unshift(targetDate);
                 }
             }
@@ -861,7 +896,7 @@
                 stratInputHistoryContainer.innerHTML = '<div class="empty-slot">저장된 주문 기록이 없습니다.</div>';
             } else {
                 allDates.forEach(dStr => {
-                    let dateData = allData[dStr] || {};
+                    let dateData = tungchigiData[dStr] || {};
                     let isSelectedCard = (dStr === targetDate);
                     
                     let stratCardsHtml = '';
@@ -872,18 +907,13 @@
                         let sList = sData && sData.sells ? sData.sells.filter(s => (s.price || s.isMoc) && s.qty) : [];
 
                         let buyStr = bList.length > 0 ? `<b>LOC:</b> ` + bList.map(b => `$${b.price} / ${b.qty}주`).join(', ') : '매수 주문 없음';
-                        
                         let sellStr = '매도 주문 없음';
                         if (sList.length > 0) {
                             let locItems = sList.filter(s => !s.isMoc);
                             let mocItems = sList.filter(s => s.isMoc);
                             let parts = [];
-                            if (locItems.length > 0) {
-                                parts.push(`<b>LOC:</b> ` + locItems.map(s => `$${s.price} / ${s.qty}주`).join(', '));
-                            }
-                            if (mocItems.length > 0) {
-                                parts.push(`<b>MOC:</b> ` + mocItems.map(s => `${s.qty}주`).join(', '));
-                            }
+                            if (locItems.length > 0) parts.push(`<b>LOC:</b> ` + locItems.map(s => `$${s.price} / ${s.qty}주`).join(', '));
+                            if (mocItems.length > 0) parts.push(`<b>MOC:</b> ` + mocItems.map(s => `${s.qty}주`).join(', '));
                             sellStr = parts.join(' | ');
                         }
 
@@ -988,7 +1018,7 @@
         if(!tbody || !tfoot) return;
         
         let recordDate = document.getElementById('record-date').value;
-        let history = JSON.parse(localStorage.getItem('4strat_history_v13')) || [];
+        let history = [...historyData];
         history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         let rateInput = document.getElementById('record-exchange-rate');
@@ -1004,9 +1034,6 @@
                 rateInput.value = exactRecord.exchangeRate || 1350;
                 rateInput.dataset.lastDate = recordDate;
             }
-        } else {
-            if (closeInput && closeInput.dataset.lastDate !== recordDate) closeInput.dataset.lastDate = recordDate;
-            if (rateInput && rateInput.dataset.lastDate !== recordDate) rateInput.dataset.lastDate = recordDate;
         }
 
         let closePrice = parseFloat(closeInput.value) || 0;
@@ -1016,9 +1043,7 @@
         let totalShares = 0, totalCash = 0, totalValUSD = 0, totalInit = 0;
         let totalWeightedCost = 0;
 
-        let allOrdersData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
-        let dayOrders = allOrdersData[recordDate] || {};
-
+        let dayOrders = tungchigiData[recordDate] || {};
         let pastRecords = history.filter(h => h.date < recordDate);
         let prevRecord = pastRecords.length > 0 ? pastRecords[pastRecords.length - 1] : null;
 
@@ -1128,17 +1153,15 @@
         }
     }
 
-    function updateBalanceLive() {
+    window.updateBalanceLive = function() {
         renderBalanceTable();
     }
+    window.manualOverrideBalance = function() {}
 
-    function manualOverrideBalance() {}
-
-    function saveDailyRecord() {
+    window.saveDailyRecord = function() {
         let date = document.getElementById('record-date').value;
         let closePrice = parseFloat(document.getElementById('record-close-price').value) || 0;
         let exchangeRate = parseFloat(document.getElementById('record-exchange-rate').value) || 0;
-        let history = JSON.parse(localStorage.getItem('4strat_history_v13')) || [];
         let details = {};
         let totalValUSD = 0, totalInit = 0, totalSh = 0;
 
@@ -1170,24 +1193,22 @@
 
         let recordItem = { date, closePrice, exchangeRate, totalSh, totalValUSD, totalValKRW, totProfit, totRet, details };
         
-        let existingIndex = history.findIndex(h => h.date === date);
+        let existingIndex = historyData.findIndex(h => h.date === date);
         let isCascade = document.getElementById('cascade-update-check').checked;
 
         if (existingIndex >= 0) {
-            history[existingIndex] = recordItem;
-            alert(`[${date}] 기존 일별 잔고 기록이 수정되었습니다!`);
+            historyData[existingIndex] = recordItem;
         } else {
-            history.push(recordItem);
-            alert(`[${date}] 일별 잔고 기록이 새로 저장되었습니다!`);
+            historyData.push(recordItem);
         }
 
-        history.sort((a, b) => new Date(a.date) - new Date(b.date));
+        historyData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        if (isCascade && history.length > 1) {
-            let modifiedIdx = history.findIndex(h => h.date === date);
-            for (let i = modifiedIdx + 1; i < history.length; i++) {
-                let prevH = history[i - 1];
-                let currH = history[i];
+        if (isCascade && historyData.length > 1) {
+            let modifiedIdx = historyData.findIndex(h => h.date === date);
+            for (let i = modifiedIdx + 1; i < historyData.length; i++) {
+                let prevH = historyData[i - 1];
+                let currH = historyData[i];
                 let currClose = currH.closePrice;
                 let currRate = currH.exchangeRate || exchangeRate;
 
@@ -1224,20 +1245,15 @@
                 currH.exchangeRate = currRate;
                 currH.details = newDetails;
             }
-            alert("선택하신 옵션에 따라 이후 날짜들의 히스토리도 연쇄적으로 재계산되었습니다.");
         }
 
-        localStorage.setItem('4strat_history_v13', JSON.stringify(history));
-        
-        if(document.getElementById('record-exchange-rate')) {
-            document.getElementById('record-exchange-rate').dataset.lastDate = date;
-        }
-        
+        syncToCloud();
+        alert(`[${date}] 일별 잔고 기록이 클라우드 서버에 실시간 저장되었습니다!`);
         renderHistoryList();
     }
 
     let isBalanceHistoryAllView = false;
-    function toggleBalanceHistoryViewMode() {
+    window.toggleBalanceHistoryViewMode = function() {
         isBalanceHistoryAllView = !isBalanceHistoryAllView;
         let btn = document.getElementById('balance-history-toggle-btn');
         if(btn) btn.textContent = isBalanceHistoryAllView ? '전체보기 전환' : '조회일만 보기 전환';
@@ -1268,7 +1284,6 @@
                 let color = chartColors[idx % chartColors.length];
 
                 svgContent += `<circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="${color}" stroke-width="12" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="${strokeDashoffset}" transform="rotate(-90 ${center} ${center})" />`;
-
                 accumulatedOffset += ratio * circumference;
             }
             idx++;
@@ -1284,16 +1299,14 @@
     function renderHistoryList() {
         const container = document.getElementById('history-container');
         if(!container) return;
-        let history = JSON.parse(localStorage.getItem('4strat_history_v13')) || [];
         let recordDate = document.getElementById('record-date') ? document.getElementById('record-date').value : '';
         
-        if (history.length === 0) {
+        if (historyData.length === 0) {
             container.innerHTML = '<div class="empty-slot">저장된 히스토리가 없습니다.</div>';
             return;
         }
 
-        let sortedHistoryDesc = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
-        
+        let sortedHistoryDesc = [...historyData].sort((a, b) => new Date(b.date) - new Date(a.date));
         let displayList = sortedHistoryDesc;
         if (isBalanceHistoryAllView && recordDate) {
             displayList = sortedHistoryDesc.filter(h => h.date === recordDate);
@@ -1346,15 +1359,12 @@
         });
     }
 
-    function deleteHistoryItem(dateStr) {
+    window.deleteHistoryItem = function(dateStr) {
         if (!confirm(`[${dateStr}] 히스토리를 삭제하시겠습니까?`)) return;
-        let history = JSON.parse(localStorage.getItem('4strat_history_v13')) || [];
-        history = history.filter(h => h.date !== dateStr);
-        localStorage.setItem('4strat_history_v13', JSON.stringify(history));
+        historyData = historyData.filter(h => h.date !== dateStr);
+        syncToCloud();
         renderHistoryList();
     }
-
-    initUI();
 </script>
 </body>
 </html>
