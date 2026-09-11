@@ -27,7 +27,7 @@
             margin-bottom: 25px;
         }
         .header h1 { font-size: 26px; margin-bottom: 8px; color: #1a365d; }
-        .header p { font-size: 13px; color: #888; }
+        .header p { font-size: 13px; color: #888; margin-bottom: 12px; }
 
         .firebase-badge {
             display: inline-flex;
@@ -188,10 +188,16 @@
 <div class="container">
     <div class="header">
         <h1>통합 퉁치기 & 잔고 일별 기록</h1>
-        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 클라우드 동기화 시스템 (REV.2.1)</p>
+        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 클라우드 동기화 시스템 (REV.2.2)</p>
         <div id="firebase-status" class="firebase-badge">
             <span class="firebase-dot"></span>서버 연결 중...
         </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:15px;">
+        <button onclick="exportData()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#2b6cb0;">💾 데이터 백업(내보내기)</button>
+        <button onclick="document.getElementById('import-file-input').click()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#276749;">📂 데이터 불러오기(복원)</button>
+        <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
     </div>
 
     <div class="tabs" id="tab-buttons"></div>
@@ -210,7 +216,7 @@
     const chartColors = ['#2b6cb0', '#e53e3e', '#d69e2e', '#38a169', '#805ad5', '#319795', '#dd6b20'];
     let dbRef = null;
 
-    // 파이어베이스 실시간 연동 설정 (서버 데이터를 최우선으로 반영)
+    // 파이어베이스 실시간 연동 설정
     setTimeout(function() {
         const statusEl = document.getElementById('firebase-status');
         if (typeof firebase === 'undefined') {
@@ -260,6 +266,41 @@
             };
             dbRef.set(dataToSave).catch(e => {});
         } catch(e) {}
+    }
+
+    function exportData() {
+        let exportObj = {
+            config: localStorage.getItem('4strat_config_v13'),
+            tungchigiData: localStorage.getItem('4strat_tungchigi_data_v13'),
+            history: localStorage.getItem('4strat_history_v13')
+        };
+        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+        let downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `trading_backup_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importData(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let importedObj = JSON.parse(e.target.result);
+                if(importedObj.config) localStorage.setItem('4strat_config_v13', importedObj.config);
+                if(importedObj.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', importedObj.tungchigiData);
+                if(importedObj.history) localStorage.setItem('4strat_history_v13', importedObj.history);
+                windowSaveCloudData();
+                alert("데이터가 성공적으로 복원되고 서버에 동기화되었습니다!");
+                location.reload();
+            } catch(err) {
+                alert("올바른 백업 파일 형식이 아닙니다.");
+            }
+        };
+        reader.readAsText(file);
     }
 
     function initUI() {
@@ -674,7 +715,7 @@
         if (!hasValidInput) { resultBox.style.display = 'none'; return; }
 
         rawBuys.sort((a, b) => b - a);
-        rawSells.sort((a, b) => a - b);
+        rawSells.sort((a, b) => b - a);
         let netOrders = { 'buy': {}, 'sell': {}, 'moc_sell': 0 };
         function addNet(type, price, qty) {
             if (price === 'MOC') netOrders.moc_sell += qty;
