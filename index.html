@@ -350,7 +350,14 @@
 <div class="container">
     <div class="header">
         <h1>통합 퉁치기 & 잔고 일별 기록</h1>
-        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 잔고 연동 시스템 (REV.1.7)</p>
+        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 잔고 연동 시스템 (REV.1.8)</p>
+    </div>
+
+    <!-- 상단 데이터 백업/복원 바 추가 -->
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:15px;">
+        <button onclick="exportData()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#2b6cb0;">💾 데이터 백업(내보내기)</button>
+        <button onclick="document.getElementById('import-file-input').click()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#276749;">📂 데이터 불러오기(복원)</button>
+        <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
     </div>
 
     <!-- 탭 버튼 -->
@@ -373,6 +380,42 @@
 
     function saveStrategiesConfig() {
         localStorage.setItem('4strat_config_v13', JSON.stringify(strategies));
+    }
+
+    // 백업(내보내기) 기능
+    function exportData() {
+        let exportObj = {
+            config: localStorage.getItem('4strat_config_v13'),
+            tungchigiData: localStorage.getItem('4strat_tungchigi_data_v13'),
+            history: localStorage.getItem('4strat_history_v13')
+        };
+        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+        let downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `trading_backup_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    // 복원(불러오기) 기능
+    function importData(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let importedObj = JSON.parse(e.target.result);
+                if(importedObj.config) localStorage.setItem('4strat_config_v13', importedObj.config);
+                if(importedObj.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', importedObj.tungchigiData);
+                if(importedObj.history) localStorage.setItem('4strat_history_v13', importedObj.history);
+                alert("데이터가 성공적으로 복원되었습니다! 페이지가 새로고침됩니다.");
+                location.reload();
+            } catch(err) {
+                alert("올바른 백업 파일 형식이 아닙니다.");
+            }
+        };
+        reader.readAsText(file);
     }
 
     function initUI() {
@@ -952,7 +995,6 @@
         let closeInput = document.getElementById('record-close-price');
         let exactRecord = history.find(h => h.date === recordDate);
         
-        // 날짜 변경 시 종가/환율 불러오기 로직
         if (exactRecord) {
             if (closeInput && closeInput.dataset.lastDate !== recordDate) {
                 closeInput.value = exactRecord.closePrice;
@@ -977,12 +1019,10 @@
         let allOrdersData = JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13')) || {};
         let dayOrders = allOrdersData[recordDate] || {};
 
-        // 핵심 변경: recordDate보다 "과거"인 날짜 중 가장 최신 기록을 찾아서 Base(기준점)로 삼음
         let pastRecords = history.filter(h => h.date < recordDate);
         let prevRecord = pastRecords.length > 0 ? pastRecords[pastRecords.length - 1] : null;
 
         strategies.forEach(strat => {
-            // 직전 잔고 불러오기 (없으면 기법별 초기 기본값)
             let base = {
                 shares: prevRecord && prevRecord.details[strat.id] ? prevRecord.details[strat.id].shares : strat.defaultShares,
                 avgPrice: prevRecord && prevRecord.details[strat.id] ? prevRecord.details[strat.id].avgPrice : strat.defaultAvg,
@@ -998,9 +1038,7 @@
             let stratDayOrders = dayOrders[strat.id] || null;
             let mult = stratDayOrders ? (stratDayOrders.mult || 1) : (strat.defaultMult || 1);
 
-            // 입력된 실시간 종가(closePrice) 기준으로 당일 주문 체결 시뮬레이션 적용
             if (stratDayOrders && closePrice > 0) {
-                // 1. LOC 매수 체결 (종가가 지정가 이하일 때)
                 if(stratDayOrders.buys) {
                     stratDayOrders.buys.forEach(b => {
                         let bPrice = parseFloat(b.price);
@@ -1019,7 +1057,6 @@
                     });
                 }
 
-                // 2. LOC/MOC 매도 체결 (MOC이거나 종가가 지정가 이상일 때)
                 if(stratDayOrders.sells) {
                     stratDayOrders.sells.forEach(s => {
                         let sPrice = parseFloat(s.price);
@@ -1027,11 +1064,11 @@
                         let isMoc = s.isMoc;
                         if (!isNaN(sQty) && sQty > 0) {
                             if (isMoc || (!isNaN(sPrice) && closePrice >= sPrice)) {
-                                let executedQty = Math.min(currentShares, sQty); // 없는 주식 매도 방지
+                                let executedQty = Math.min(currentShares, sQty);
                                 if (executedQty > 0) {
                                     currentCash += executedQty * closePrice;
                                     currentShares -= executedQty;
-                                    if (currentShares === 0) currentAvg = 0; // 전량 매도시 평단가 0 초기화
+                                    if (currentShares === 0) currentAvg = 0;
                                 }
                             }
                         }
@@ -1053,10 +1090,8 @@
                 <tr>
                     <td title="${strat.name}"><b>${strat.name}</b></td>
                     <td><input type="number" id="bal-shares-${strat.id}" value="${currentShares}" oninput="manualOverrideBalance()"></td>
-                    <!-- 평단가는 소수점 4자리까지 표시되도록 개선 -->
                     <td><input type="number" step="0.0001" id="bal-avg-${strat.id}" value="${currentAvg.toFixed(4)}" oninput="manualOverrideBalance()"></td>
                     <td><input type="number" step="0.01" id="bal-cash-${strat.id}" value="${currentCash.toFixed(2)}" oninput="manualOverrideBalance()"></td>
-                    <!-- 평가총합은 자동계산되므로 읽기 전용(readonly) 처리 -->
                     <td><input type="number" step="0.01" id="bal-val-${strat.id}" value="${evaluationTotal.toFixed(2)}" readonly style="background-color:#f8f9fa; cursor:not-allowed; outline:none; border:none; text-align:center;"></td>
                     <td id="val-profit-${strat.id}" style="color:${profitUSD>=0?'#e53e3e':'#3182ce'}">$${profitUSD.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td id="val-return-${strat.id}" style="color:${returnRate>=0?'#e53e3e':'#3182ce'}">${returnRate >= 0 ? '▲' : '▼'}${Math.abs(returnRate).toFixed(1)}%</td>
@@ -1194,7 +1229,6 @@
 
         localStorage.setItem('4strat_history_v13', JSON.stringify(history));
         
-        // 데이터 저장 직후 해당 날짜 입력 필드의 lastDate 캐시를 갱신하여 수정 내용이 유지되도록 함
         if(document.getElementById('record-exchange-rate')) {
             document.getElementById('record-exchange-rate').dataset.lastDate = date;
         }
