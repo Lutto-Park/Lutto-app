@@ -375,7 +375,7 @@
         }
     </style>
 
-    <!-- 파이어베이스 스크립트 (화면 로딩 방해하지 않음) -->
+    <!-- 파이어베이스 스크립트 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
@@ -390,16 +390,13 @@
         </div>
     </div>
 
-    <!-- 탭 버튼 -->
     <div class="tabs" id="tab-buttons"></div>
-
-    <!-- 각 기법별 입력 화면 및 결과/잔고 화면 -->
     <div id="tab-contents"></div>
 </div>
 
 <script>
     // ==========================================
-    // 1. 기본 변수 및 데이터 안전하게 선언 (에러 완벽 차단)
+    // 1. 기본 설정 5대 기법 완벽 정의
     // ==========================================
     const defaultStrategies = [
         { id: 'strat1', name: '스위치', defaultMult: 1, defaultCash: 72134.02, defaultShares: 0, defaultAvg: 0, defaultInit: 60000 },
@@ -409,7 +406,7 @@
         { id: 'strat5', name: '방어', defaultMult: 1, defaultCash: 50000.00, defaultShares: 0, defaultAvg: 0, defaultInit: 50000 }
     ];
 
-    let strategies = defaultStrategies;
+    let strategies = JSON.parse(JSON.stringify(defaultStrategies));
     try {
         let localConf = localStorage.getItem('4strat_config_v13');
         if (localConf) strategies = JSON.parse(localConf);
@@ -421,7 +418,7 @@
     let dbRef = null;
 
     // ==========================================
-    // 2. 파이어베이스 오류와 무관하게 화면부터 무조건 그리는 함수들
+    // 2. 화면 UI 그리기
     // ==========================================
     function initUI() {
         const tabBtns = document.getElementById('tab-buttons');
@@ -537,11 +534,10 @@
                     <input type="text" id="new-strat-name" placeholder="추가할 새 기법 이름 입력" style="flex:1;">
                     <button class="execute-btn" onclick="addNewStrategy()" style="width:150px; padding:10px; background-color:#38a169;">+ 기법 추가</button>
                 </div>
-                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">전체 초기화</button>
+                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">초기화 (5대 기법 완벽 복구)</button>
             </div>
         `;
 
-        // 기본 날짜 오늘로 셋팅
         let todayStr = new Date().toLocaleDateString('en-CA');
         strategies.forEach(strat => {
             let dateInput = document.getElementById(`date-${strat.id}`);
@@ -556,13 +552,10 @@
         renderHistoryList();
     }
 
-    // ==========================================
-    // 3. UI 그리기 즉시 실행! (파이어베이스 통신 전에 무조건 화면부터 띄움)
-    // ==========================================
     initUI();
 
     // ==========================================
-    // 4. 파이어베이스 연동 (화면 다 그리고 0.5초 뒤 조용히 백그라운드 처리)
+    // 3. 파이어베이스 연동 로직
     // ==========================================
     setTimeout(function() {
         const statusEl = document.getElementById('firebase-status');
@@ -571,11 +564,8 @@
             statusEl.innerHTML = '<span class="firebase-dot"></span>서버 차단됨 (오프라인 모드)';
             return;
         }
-
         try {
-            firebase.initializeApp({
-                databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-southeast1.firebasedatabase.app"
-            });
+            firebase.initializeApp({ databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-southeast1.firebasedatabase.app" });
             dbRef = firebase.database().ref('sd3p_app_data');
             
             dbRef.once('value').then((snapshot) => {
@@ -587,7 +577,7 @@
                     }
                     if (data.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(data.tungchigiData));
                     if (data.historyData) localStorage.setItem('4strat_history_v13', JSON.stringify(data.historyData));
-                    initUI(); // 클라우드 데이터 받았으니 화면 한 번 새로고침
+                    initUI(); 
                 }
                 statusEl.className = "firebase-badge connected";
                 statusEl.innerHTML = '<span class="firebase-dot"></span>서버 연동 완료';
@@ -601,11 +591,8 @@
         }
     }, 500);
 
-    // ==========================================
-    // 5. 기능 로직 (저장 시 클라우드 전송 포함)
-    // ==========================================
     function windowSaveCloudData() {
-        if (!dbRef) return; // 서버 미연결 시 로컬만 저장
+        if (!dbRef) return;
         try {
             const dataToSave = {
                 strategies: strategies,
@@ -614,6 +601,37 @@
             };
             dbRef.set(dataToSave).catch(e => console.log("서버 백업 실패"));
         } catch(e) {}
+    }
+
+    // ==========================================
+    // 4. 문제의 초기화 버튼 완벽 수정 (서버까지 클린 포맷)
+    // ==========================================
+    function resetAllData() {
+        if (!confirm("모든 데이터를 지우고 기본 5개 기법으로 완벽 복구하시겠습니까?")) return;
+        
+        // 1. 로컬 저장소 싹 다 비우기
+        localStorage.removeItem('4strat_config_v13');
+        localStorage.removeItem('4strat_tungchigi_data_v13');
+        localStorage.removeItem('4strat_history_v13');
+        
+        // 2. 꼬여있는 현재 변수를 기본 5대 기법으로 강제 변경
+        strategies = JSON.parse(JSON.stringify(defaultStrategies));
+        
+        // 3. 클라우드 서버에도 강제로 기본 5대 기법을 덮어써버리기
+        if (dbRef) {
+            dbRef.set({
+                strategies: strategies,
+                tungchigiData: {},
+                historyData: []
+            }).then(() => {
+                alert("서버와 로컬 모두 초기화가 완료되었습니다.");
+                location.reload();
+            }).catch(() => {
+                location.reload();
+            });
+        } else {
+            location.reload();
+        }
     }
 
     function switchTab(index) {
@@ -721,15 +739,6 @@
         let dateVal = document.getElementById(`date-${stratId}`).value;
         let strat = strategies.find(s => s.id === stratId);
         alert(`[${dateVal}] ${strat.name} 기법 주문 기록이 저장되었습니다.`);
-    }
-
-    function resetAllData() {
-        if (!confirm("모든 정보가 초기화됩니다. 계속하시겠습니까?")) return;
-        localStorage.removeItem('4strat_config_v13');
-        localStorage.removeItem('4strat_tungchigi_data_v13');
-        localStorage.removeItem('4strat_history_v13');
-        windowSaveCloudData();
-        location.reload();
     }
 
     function renderStrategyManageList() {
