@@ -49,21 +49,10 @@
             border-radius: 50%;
             display: inline-block;
         }
-        .firebase-badge.connected {
-            background-color: #ebf8ff;
-            border-color: #90cdf4;
-            color: #2b6cb0;
-        }
-        .firebase-badge.disconnected {
-            background-color: #fff5f5;
-            border-color: #feb2b2;
-            color: #9b2c2c;
-        }
-        .firebase-badge.disconnected .firebase-dot {
-            background-color: #e53e3e;
-        }
+        .firebase-badge.connected { background-color: #ebf8ff; border-color: #90cdf4; color: #2b6cb0; }
+        .firebase-badge.disconnected { background-color: #fff5f5; border-color: #feb2b2; color: #9b2c2c; }
+        .firebase-badge.disconnected .firebase-dot { background-color: #e53e3e; }
 
-        /* 탭 디자인 */
         .tabs {
             display: flex;
             border-bottom: 2px solid #ddd;
@@ -101,19 +90,8 @@
             gap: 10px;
             flex-wrap: wrap;
         }
-        .control-box label {
-            font-size: 13px;
-            font-weight: bold;
-            color: #4a5568;
-        }
-        .control-box input {
-            padding: 6px;
-            border: 1px solid #cbd5e0;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 14px;
-            outline: none;
-        }
+        .control-box label { font-size: 13px; font-weight: bold; color: #4a5568; }
+        .control-box input { padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; text-align: center; font-size: 14px; outline: none; }
 
         .section-title {
             font-size: 15px;
@@ -127,137 +105,42 @@
         .title-sell { color: #3182ce; margin-top: 25px; }
         .title-sell::before { content: ""; display: inline-block; width: 3px; height: 15px; background-color: #3182ce; margin-right: 8px; }
         
-        .order-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            gap: 10px;
-        }
-        .order-num {
-            font-size: 12px;
-            color: #aaa;
-            width: 15px;
-            text-align: center;
-        }
-        .input-group {
-            flex: 1;
-            display: flex;
-            gap: 10px;
-        }
+        .order-row { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; }
+        .order-num { font-size: 12px; color: #aaa; width: 15px; text-align: center; }
+        .input-group { flex: 1; display: flex; gap: 10px; }
         input[type="number"], input[type="date"], input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 14px;
-            outline: none;
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 14px; outline: none;
         }
         input:focus { border-color: #3182ce; }
         input::placeholder { color: #bbb; }
         
-        .moc-check {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            color: #888;
-            width: 30px;
-        }
-        .delete-btn {
-            background: none;
-            border: none;
-            color: #ccc;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 0 5px;
-            line-height: 1;
-        }
+        .moc-check { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #888; width: 30px; }
+        .delete-btn { background: none; border: none; color: #ccc; font-size: 20px; cursor: pointer; padding: 0 5px; line-height: 1; }
         .delete-btn:hover { color: #e53e3e; }
         
         .add-btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #f8f9fa;
-            border: 1px dashed #ccc;
-            border-radius: 6px;
-            color: #666;
-            font-size: 13px;
-            cursor: pointer;
-            margin-top: 5px;
+            width: 100%; padding: 12px; background-color: #f8f9fa; border: 1px dashed #ccc; border-radius: 6px; color: #666; font-size: 13px; cursor: pointer; margin-top: 5px;
         }
         .add-btn:hover { background-color: #f1f3f5; }
 
         .execute-btn {
-            width: 100%;
-            padding: 16px;
-            background-color: #2b6cb0;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%; padding: 16px; background-color: #2b6cb0; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .execute-btn:hover { background-color: #2c5282; }
 
-        .result-box {
-            margin-top: 20px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            display: none;
-        }
-
-        .dual-tables-container {
-            display: flex;
-            gap: 15px;
-            align-items: flex-start;
-        }
-        .order-column {
-            flex: 1;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 12px;
-            min-height: 200px;
-        }
-        .column-title {
-            font-size: 14px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #edf2f7;
-        }
+        .result-box { margin-top: 20px; padding: 20px; background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; display: none; }
+        .dual-tables-container { display: flex; gap: 15px; align-items: flex-start; }
+        .order-column { flex: 1; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; min-height: 200px; }
+        .column-title { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #edf2f7; }
         .title-sell-col { color: #2b6cb0; }
         .title-buy-col { color: #c53030; }
 
         .order-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 7px 10px;
-            margin-bottom: 5px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            border: 1px solid #cbd5e0;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; margin-bottom: 5px; border-radius: 6px; font-size: 13px; font-weight: bold; border: 1px solid #cbd5e0; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         }
         .card-sell { color: #2b6cb0; }
         .card-buy { color: #c53030; }
-
-        .dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
+        .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .dot-sell { background-color: #3182ce; }
         .dot-buy { background-color: #e53e3e; }
 
@@ -266,116 +149,37 @@
         .empty-slot { text-align: center; color: #aaa; font-size: 12px; padding: 20px 0; }
 
         .cash-needed-box {
-            margin-top: 20px;
-            background: #ebf8ff;
-            border: 1px solid #90cdf4;
-            border-radius: 6px;
-            padding: 15px;
-            font-size: 13px;
-            color: #2b6cb0;
-            line-height: 1.5;
+            margin-top: 20px; background: #ebf8ff; border: 1px solid #90cdf4; border-radius: 6px; padding: 15px; font-size: 13px; color: #2b6cb0; line-height: 1.5;
         }
         .cash-needed-box b { font-size: 15px; color: #1a365d; }
 
         .balance-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            background: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #cbd5e0;
-            table-layout: fixed;
+            width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e0; table-layout: fixed;
         }
         .balance-table th, .balance-table td {
-            border: 1px solid #cbd5e0;
-            padding: 6px 3px;
-            text-align: center;
-            font-size: 11px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            border: 1px solid #cbd5e0; padding: 6px 3px; text-align: center; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .balance-table th { background-color: #f7fafc; color: #4a5568; font-weight: bold; }
         .balance-table tfoot td { background-color: #edf2f7; font-weight: bold; color: #1a365d; }
         .balance-table input {
-            width: 100%;
-            height: 28px;
-            padding: 2px 4px;
-            border: 1px solid #cbd5e0;
-            border-radius: 4px;
-            text-align: center;
-            font-size: 11px;
-            background-color: #fff;
+            width: 100%; height: 28px; padding: 2px 4px; border: 1px solid #cbd5e0; border-radius: 4px; text-align: center; font-size: 11px; background-color: #fff;
         }
 
         .krw-summary-box {
-            margin-top: 12px;
-            background: #f0fff4;
-            border: 1px solid #9ae6b4;
-            border-radius: 6px;
-            padding: 12px 15px;
-            font-size: 13px;
-            color: #276749;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin-top: 12px; background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 6px; padding: 12px 15px; font-size: 13px; color: #276749; display: flex; justify-content: space-between; align-items: center;
         }
         .krw-summary-box b { font-size: 15px; color: #22543d; }
 
-        .history-card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
+        .history-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
         .history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #edf2f7;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #2b6cb0;
-            font-size: 14px;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; margin-bottom: 10px; font-weight: bold; color: #2b6cb0; font-size: 14px;
         }
-        .history-body-grid {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        .history-info-side {
-            flex: 1.5;
-            font-size: 13px;
-            color: #4a5568;
-            line-height: 1.6;
-        }
-        .history-chart-side {
-            flex: 0.9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8f9fa;
-            border: 1px solid #edf2f7;
-            border-radius: 8px;
-            padding: 10px;
-        }
-        
-        .strat-manage-box {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
+        .history-body-grid { display: flex; gap: 15px; align-items: center; }
+        .history-info-side { flex: 1.5; font-size: 13px; color: #4a5568; line-height: 1.6; }
+        .history-chart-side { flex: 0.9; display: flex; align-items: center; justify-content: center; background: #f8f9fa; border: 1px solid #edf2f7; border-radius: 8px; padding: 10px; }
+        .strat-manage-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
     </style>
 
-    <!-- 파이어베이스 스크립트 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
@@ -384,10 +188,16 @@
 <div class="container">
     <div class="header">
         <h1>통합 퉁치기 & 잔고 일별 기록</h1>
-        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 클라우드 동기화 시스템 (REV.1.7)</p>
+        <p>LOC/MOC 종가 기준 자동 체결 시뮬레이션 및 클라우드 동기화 시스템 (REV.1.9)</p>
         <div id="firebase-status" class="firebase-badge">
-            <span class="firebase-dot"></span>데이터 불러오는 중...
+            <span class="firebase-dot"></span>서버 연결 중...
         </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:15px;">
+        <button onclick="exportData()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#2b6cb0;">💾 데이터 백업(내보내기)</button>
+        <button onclick="document.getElementById('import-file-input').click()" style="padding:6px 12px; font-size:12px; background:#edf2f7; border:1px solid #cbd5e0; border-radius:4px; cursor:pointer; font-weight:bold; color:#276749;">📂 데이터 불러오기(복원)</button>
+        <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
     </div>
 
     <div class="tabs" id="tab-buttons"></div>
@@ -395,31 +205,101 @@
 </div>
 
 <script>
-    // ==========================================
-    // 1. 기본 설정 5대 기법 완벽 정의
-    // ==========================================
     const defaultStrategies = [
         { id: 'strat1', name: '스위치', defaultMult: 1, defaultCash: 72134.02, defaultShares: 0, defaultAvg: 0, defaultInit: 60000 },
         { id: 'strat2', name: '동파', defaultMult: 6, defaultCash: 68490.00, defaultShares: 90, defaultAvg: 125.87, defaultInit: 60000 },
         { id: 'strat3', name: '3쥐', defaultMult: 6, defaultCash: 49428.00, defaultShares: 12, defaultAvg: 123.31, defaultInit: 60000 },
-        { id: 'strat4', name: '펑그마', defaultMult: 1, defaultCash: 5310.41, defaultShares: 1, defaultAvg: 108.89, defaultInit: 5000 },
-        { id: 'strat5', name: '방어', defaultMult: 1, defaultCash: 50000.00, defaultShares: 0, defaultAvg: 0, defaultInit: 50000 }
+        { id: 'strat4', name: '펑그마', defaultMult: 1, defaultCash: 5310.41, defaultShares: 1, defaultAvg: 108.89, defaultInit: 5000 }
     ];
 
-    let strategies = JSON.parse(JSON.stringify(defaultStrategies));
-    try {
-        let localConf = localStorage.getItem('4strat_config_v13');
-        if (localConf) strategies = JSON.parse(localConf);
-    } catch(e) { console.warn("로컬 설정 불러오기 실패"); }
-
-    let chartColors = ['#2b6cb0', '#e53e3e', '#d69e2e', '#38a169', '#805ad5', '#319795', '#dd6b20'];
-    let isStratHistoryAllView = false;
-    let isBalanceHistoryAllView = false;
+    let strategies = JSON.parse(localStorage.getItem('4strat_config_v13')) || defaultStrategies;
+    const chartColors = ['#2b6cb0', '#e53e3e', '#d69e2e', '#38a169', '#805ad5', '#319795', '#dd6b20'];
     let dbRef = null;
 
-    // ==========================================
-    // 2. 화면 UI 그리기
-    // ==========================================
+    // 파이어베이스 실시간 연동 설정
+    setTimeout(function() {
+        const statusEl = document.getElementById('firebase-status');
+        if (typeof firebase === 'undefined') {
+            statusEl.className = "firebase-badge disconnected";
+            statusEl.innerHTML = '<span class="firebase-dot"></span>오프라인 모드';
+            return;
+        }
+        try {
+            firebase.initializeApp({ databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-southeast1.firebasedatabase.app" });
+            dbRef = firebase.database().ref('sd3p_app_data');
+            
+            dbRef.on('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    if (data.strategies && Array.isArray(data.strategies) && data.strategies.length > 0) {
+                        strategies = data.strategies;
+                        localStorage.setItem('4strat_config_v13', JSON.stringify(strategies));
+                    }
+                    if (data.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(data.tungchigiData));
+                    if (data.historyData) localStorage.setItem('4strat_history_v13', JSON.stringify(data.historyData));
+                    initUI(); 
+                } else {
+                    windowSaveCloudData();
+                }
+                statusEl.className = "firebase-badge connected";
+                statusEl.innerHTML = '<span class="firebase-dot"></span>서버 동기화 완료';
+            }, (error) => {
+                statusEl.className = "firebase-badge disconnected";
+                statusEl.innerHTML = '<span class="firebase-dot"></span>서버 연결 실패';
+            });
+        } catch(e) {
+            statusEl.className = "firebase-badge disconnected";
+            statusEl.innerHTML = '<span class="firebase-dot"></span>오프라인 모드';
+        }
+    }, 500);
+
+    function windowSaveCloudData() {
+        if (!dbRef) return;
+        try {
+            const dataToSave = {
+                strategies: strategies,
+                tungchigiData: JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13') || '{}'),
+                historyData: JSON.parse(localStorage.getItem('4strat_history_v13') || '[]')
+            };
+            dbRef.set(dataToSave).catch(e => {});
+        } catch(e) {}
+    }
+
+    function exportData() {
+        let exportObj = {
+            config: localStorage.getItem('4strat_config_v13'),
+            tungchigiData: localStorage.getItem('4strat_tungchigi_data_v13'),
+            history: localStorage.getItem('4strat_history_v13')
+        };
+        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+        let downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `trading_backup_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importData(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let importedObj = JSON.parse(e.target.result);
+                if(importedObj.config) localStorage.setItem('4strat_config_v13', importedObj.config);
+                if(importedObj.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', importedObj.tungchigiData);
+                if(importedObj.history) localStorage.setItem('4strat_history_v13', importedObj.history);
+                windowSaveCloudData();
+                alert("데이터가 성공적으로 복원되고 서버에 동기화되었습니다!");
+                location.reload();
+            } catch(err) {
+                alert("올바른 백업 파일 형식이 아닙니다.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
     function initUI() {
         const tabBtns = document.getElementById('tab-buttons');
         const tabContents = document.getElementById('tab-contents');
@@ -500,7 +380,7 @@
                     <div><label>📅 기록 날짜</label><input type="date" id="record-date" onchange="updateBalanceLive()" style="width:130px; margin-left:5px;"></div>
                     <div style="display:flex; gap:15px; align-items:center;">
                         <div><label>💵 당일 종가($)</label><input type="number" step="0.01" id="record-close-price" value="125.87" oninput="updateBalanceLive()" style="width:80px; margin-left:5px;"></div>
-                        <div><label>💱 환율(원/달러)</label><input type="number" step="0.01" id="record-exchange-rate" value="1350.00" oninput="updateBalanceLive()" style="width:90px; margin-left:5px;"></div>
+                        <div><label>💱 환율(원/달러)</label><input type="number" step="0.01" id="record-exchange-rate" value="1340.00" oninput="updateBalanceLive()" style="width:90px; margin-left:5px;"></div>
                     </div>
                 </div>
                 <table class="balance-table">
@@ -514,7 +394,7 @@
                 </div>
                 <div style="margin-top:8px; font-size:12px; color:#555; display:flex; align-items:center; gap:5px; background:#f0f4f8; padding:8px 12px; border-radius:6px;">
                     <input type="checkbox" id="cascade-update-check" style="width:15px; height:15px; cursor:pointer;">
-                    <label for="cascade-update-check" style="cursor:pointer; font-weight:bold; color:#2b6cb0;">과거 날짜 수정 시, 이후 기록 연쇄 재계산하기</label>
+                    <label for="cascade-update-check" style="cursor:pointer; font-weight:bold; color:#2b6cb0;">과거 날짜 수정 시, 이후 등록된 모든 일별 히스토리도 연쇄 재계산하기</label>
                 </div>
                 <hr style="margin: 25px 0; border:0; border-top:1px solid #eee;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -534,11 +414,11 @@
                     <input type="text" id="new-strat-name" placeholder="추가할 새 기법 이름 입력" style="flex:1;">
                     <button class="execute-btn" onclick="addNewStrategy()" style="width:150px; padding:10px; background-color:#38a169;">+ 기법 추가</button>
                 </div>
-                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">초기화 (5대 기법 완벽 복구)</button>
+                <button class="execute-btn" onclick="resetAllData()" style="background-color:#e53e3e; margin-top:30px;">전체 초기화</button>
             </div>
         `;
 
-        let todayStr = new Date().toLocaleDateString('en-CA');
+        let todayStr = "2026-09-10";
         strategies.forEach(strat => {
             let dateInput = document.getElementById(`date-${strat.id}`);
             if(dateInput) dateInput.value = todayStr;
@@ -550,88 +430,6 @@
         renderStrategyManageList();
         renderBalanceTable();
         renderHistoryList();
-    }
-
-    initUI();
-
-    // ==========================================
-    // 3. 파이어베이스 연동 로직
-    // ==========================================
-    setTimeout(function() {
-        const statusEl = document.getElementById('firebase-status');
-        if (typeof firebase === 'undefined') {
-            statusEl.className = "firebase-badge disconnected";
-            statusEl.innerHTML = '<span class="firebase-dot"></span>서버 차단됨 (오프라인 모드)';
-            return;
-        }
-        try {
-            firebase.initializeApp({ databaseURL: "https://sd3p-1b9e7-default-rtdb.asia-southeast1.firebasedatabase.app" });
-            dbRef = firebase.database().ref('sd3p_app_data');
-            
-            dbRef.once('value').then((snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    if (data.strategies) {
-                        strategies = data.strategies;
-                        localStorage.setItem('4strat_config_v13', JSON.stringify(strategies));
-                    }
-                    if (data.tungchigiData) localStorage.setItem('4strat_tungchigi_data_v13', JSON.stringify(data.tungchigiData));
-                    if (data.historyData) localStorage.setItem('4strat_history_v13', JSON.stringify(data.historyData));
-                    initUI(); 
-                }
-                statusEl.className = "firebase-badge connected";
-                statusEl.innerHTML = '<span class="firebase-dot"></span>서버 연동 완료';
-            }).catch((error) => {
-                statusEl.className = "firebase-badge disconnected";
-                statusEl.innerHTML = '<span class="firebase-dot"></span>DB 접근 실패 (오프라인 모드)';
-            });
-        } catch(e) {
-            statusEl.className = "firebase-badge disconnected";
-            statusEl.innerHTML = '<span class="firebase-dot"></span>서버 오류 (오프라인 모드)';
-        }
-    }, 500);
-
-    function windowSaveCloudData() {
-        if (!dbRef) return;
-        try {
-            const dataToSave = {
-                strategies: strategies,
-                tungchigiData: JSON.parse(localStorage.getItem('4strat_tungchigi_data_v13') || '{}'),
-                historyData: JSON.parse(localStorage.getItem('4strat_history_v13') || '[]')
-            };
-            dbRef.set(dataToSave).catch(e => console.log("서버 백업 실패"));
-        } catch(e) {}
-    }
-
-    // ==========================================
-    // 4. 문제의 초기화 버튼 완벽 수정 (서버까지 클린 포맷)
-    // ==========================================
-    function resetAllData() {
-        if (!confirm("모든 데이터를 지우고 기본 5개 기법으로 완벽 복구하시겠습니까?")) return;
-        
-        // 1. 로컬 저장소 싹 다 비우기
-        localStorage.removeItem('4strat_config_v13');
-        localStorage.removeItem('4strat_tungchigi_data_v13');
-        localStorage.removeItem('4strat_history_v13');
-        
-        // 2. 꼬여있는 현재 변수를 기본 5대 기법으로 강제 변경
-        strategies = JSON.parse(JSON.stringify(defaultStrategies));
-        
-        // 3. 클라우드 서버에도 강제로 기본 5대 기법을 덮어써버리기
-        if (dbRef) {
-            dbRef.set({
-                strategies: strategies,
-                tungchigiData: {},
-                historyData: []
-            }).then(() => {
-                alert("서버와 로컬 모두 초기화가 완료되었습니다.");
-                location.reload();
-            }).catch(() => {
-                location.reload();
-            });
-        } else {
-            location.reload();
-        }
     }
 
     function switchTab(index) {
@@ -760,6 +558,7 @@
         let strat = strategies.find(s => s.id === stratId);
         if(strat) {
             strat.name = newName;
+            localStorage.setItem('4strat_config_v13', JSON.stringify(strategies));
             windowSaveCloudData();
         }
     }
@@ -785,6 +584,17 @@
         location.reload();
     }
 
+    function resetAllData() {
+        if (!confirm("모든 데이터를 초기화하시겠습니까?")) return;
+        localStorage.removeItem('4strat_config_v13');
+        localStorage.removeItem('4strat_tungchigi_data_v13');
+        localStorage.removeItem('4strat_history_v13');
+        strategies = JSON.parse(JSON.stringify(defaultStrategies));
+        windowSaveCloudData();
+        location.reload();
+    }
+
+    let isStratHistoryAllView = false;
     function toggleStratHistoryViewMode() {
         isStratHistoryAllView = !isStratHistoryAllView;
         let btn = document.getElementById('strat-history-toggle-btn');
@@ -820,7 +630,8 @@
                     let price = parseFloat(b.price), qty = parseInt(b.qty);
                     if(!isNaN(price) && !isNaN(qty) && qty > 0) {
                         hasValidInput = true;
-                        for(let i=0; i<(qty*mult); i++) rawBuys.push(price);
+                        let actualQty = qty * mult;
+                        for(let i=0; i<actualQty; i++) rawBuys.push(price);
                     }
                 });
             }
@@ -829,7 +640,8 @@
                     let price = parseFloat(s.price), qty = parseInt(s.qty), isMoc = s.isMoc;
                     if(!isNaN(qty) && qty > 0) {
                         hasValidInput = true;
-                        for(let i=0; i<(qty*mult); i++) {
+                        let actualQty = qty * mult;
+                        for(let i=0; i<actualQty; i++) {
                             if (isMoc) rawSells.push(-1);
                             else if (!isNaN(price)) rawSells.push(price);
                         }
@@ -966,7 +778,7 @@
         
         if (exactRecord) {
             if (closeInput && closeInput.dataset.lastDate !== recordDate) { closeInput.value = exactRecord.closePrice; closeInput.dataset.lastDate = recordDate; }
-            if (rateInput && rateInput.dataset.lastDate !== recordDate) { rateInput.value = exactRecord.exchangeRate || 1350; rateInput.dataset.lastDate = recordDate; }
+            if (rateInput && rateInput.dataset.lastDate !== recordDate) { rateInput.value = exactRecord.exchangeRate || 1340; rateInput.dataset.lastDate = recordDate; }
         }
 
         let closePrice = parseFloat(closeInput.value) || 0;
@@ -1113,6 +925,7 @@
         renderHistoryList();
     }
 
+    let isBalanceHistoryAllView = false;
     function toggleBalanceHistoryViewMode() {
         isBalanceHistoryAllView = !isBalanceHistoryAllView;
         let btn = document.getElementById('balance-history-toggle-btn');
@@ -1158,7 +971,7 @@
                 idx++;
             }
             let donutSvg = createDonutChartSVG(item.details, item.totalValUSD);
-            let rateInfo = item.exchangeRate ? item.exchangeRate : 1350, krwVal = item.totalValKRW ? item.totalValKRW : (item.totalValUSD * rateInfo);
+            let rateInfo = item.exchangeRate ? item.exchangeRate : 1340, krwVal = item.totalValKRW ? item.totalValKRW : (item.totalValUSD * rateInfo);
             let isSelectedCard = (item.date === recordDate);
 
             container.innerHTML += `
