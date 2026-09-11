@@ -49,7 +49,6 @@
             border-radius: 50%;
         }
 
-        /* 탭 디자인 */
         .tabs {
             display: flex;
             border-bottom: 2px solid #ddd;
@@ -75,7 +74,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 공통 컨트롤 박스 */
         .control-box {
             background-color: #f7fafc;
             border: 1px solid #e2e8f0;
@@ -102,7 +100,6 @@
             outline: none;
         }
 
-        /* 주문표 디자인 */
         .section-title {
             font-size: 15px;
             font-weight: bold;
@@ -177,7 +174,6 @@
         }
         .add-btn:hover { background-color: #f1f3f5; }
 
-        /* 버튼 및 결과 디자인 */
         .execute-btn {
             width: 100%;
             padding: 16px;
@@ -266,7 +262,6 @@
         }
         .cash-needed-box b { font-size: 15px; color: #1a365d; }
 
-        /* 잔고 테이블 스타일 */
         .balance-table {
             width: 100%;
             border-collapse: collapse;
@@ -528,7 +523,6 @@
         const balIdx = strategies.length + 1;
         const setIdx = strategies.length + 2;
 
-        // 결과보기 탭
         tabBtns.innerHTML += `<button class="tab-btn" onclick="switchTab(${resIdx})" style="color:#e53e3e;">📊 결과보기</button>`;
         tabContents.innerHTML += `
             <div class="tab-content" id="content-${resIdx}">
@@ -564,7 +558,6 @@
             </div>
         `;
 
-        // 잔고 & 일별기록 탭
         tabBtns.innerHTML += `<button class="tab-btn" onclick="switchTab(${balIdx})" style="color:#2b6cb0;">📈 잔고&일별기록</button>`;
         tabContents.innerHTML += `
             <div class="tab-content" id="content-${balIdx}">
@@ -623,7 +616,6 @@
             </div>
         `;
 
-        // 기법 관리 탭
         tabBtns.innerHTML += `<button class="tab-btn" onclick="switchTab(${setIdx})" style="color:#d69e2e;">⚙️ 기법 관리</button>`;
         tabContents.innerHTML += `
             <div class="tab-content" id="content-${setIdx}">
@@ -946,7 +938,7 @@
         }
 
         rawBuys.sort((a, b) => b - a);
-        rawSells.sort((a, b) => a - b);
+        rawSells.sort((a, b) => b - a);
 
         let netOrders = { 'buy': {}, 'sell': {}, 'moc_sell': 0 };
         function addNet(type, price, qty) {
